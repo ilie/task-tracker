@@ -1,150 +1,153 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue'
-import { FileText } from 'lucide-vue-next'
-import EmptyState from './EmptyState.vue'
+import { ref, watch, nextTick } from "vue";
+import { FileText } from "lucide-vue-next";
+import EmptyState from "./EmptyState.vue";
 
 const props = defineProps({
   html: String,
   searchQuery: String,
   filteredTasks: Array,
   allTasks: Array,
-})
+});
 
-const contentRef = ref(null)
+const contentRef = ref(null);
 
 // Filter and highlight content based on search and filters
 function applyFiltersAndHighlight() {
-  if (!contentRef.value) return
+  if (!contentRef.value) return;
 
-  const content = contentRef.value
-  const query = props.searchQuery?.toLowerCase() || ''
+  const content = contentRef.value;
+  const query = props.searchQuery?.toLowerCase() || "";
   const hasFilters =
-    query || (props.filteredTasks && props.filteredTasks.length < props.allTasks.length)
+    query ||
+    (props.filteredTasks && props.filteredTasks.length < props.allTasks.length);
 
   // Get filtered task texts for matching
-  const filteredTaskTexts = props.filteredTasks?.map((t) => t.text.toLowerCase()) || []
+  const filteredTaskTexts =
+    props.filteredTasks?.map((t) => t.text.toLowerCase()) || [];
 
   // Process all list items
-  const listItems = content.querySelectorAll('li')
+  const listItems = content.querySelectorAll("li");
   listItems.forEach((li) => {
-    const text = li.textContent.toLowerCase()
-    let shouldShow = true
+    const text = li.textContent.toLowerCase();
+    let shouldShow = true;
 
     if (hasFilters) {
       // Check if this item matches any filtered task
       const matchesFilter =
         !props.filteredTasks ||
         filteredTaskTexts.some(
-          (taskText) => text.includes(taskText) || taskText.includes(text.trim()),
-        )
+          (taskText) =>
+            text.includes(taskText) || taskText.includes(text.trim())
+        );
 
       // Check if it matches search query
-      const matchesSearch = !query || text.includes(query)
+      const matchesSearch = !query || text.includes(query);
 
-      shouldShow = matchesFilter && matchesSearch
+      shouldShow = matchesFilter && matchesSearch;
     }
 
     if (shouldShow) {
-      li.style.display = ''
-      li.classList.remove('opacity-30')
+      li.style.display = "";
+      li.classList.remove("opacity-30");
     } else {
-      li.style.display = 'none'
+      li.style.display = "none";
     }
-  })
+  });
 
   // Hide empty sections
-  const headings = content.querySelectorAll('h2, h3')
+  const headings = content.querySelectorAll("h2, h3");
   headings.forEach((heading) => {
     if (hasFilters) {
-      let nextElement = heading.nextElementSibling
-      let hasVisibleItems = false
+      let nextElement = heading.nextElementSibling;
+      let hasVisibleItems = false;
 
       // Check if the section has any visible list items
-      while (nextElement && !['H1', 'H2', 'H3'].includes(nextElement.tagName)) {
-        if (nextElement.tagName === 'UL') {
-          const visibleItems = Array.from(nextElement.querySelectorAll('li')).filter(
-            (li) => li.style.display !== 'none',
-          )
+      while (nextElement && !["H1", "H2", "H3"].includes(nextElement.tagName)) {
+        if (nextElement.tagName === "UL") {
+          const visibleItems = Array.from(
+            nextElement.querySelectorAll("li")
+          ).filter((li) => li.style.display !== "none");
           if (visibleItems.length > 0) {
-            hasVisibleItems = true
-            break
+            hasVisibleItems = true;
+            break;
           }
         }
-        nextElement = nextElement.nextElementSibling
+        nextElement = nextElement.nextElementSibling;
       }
 
-      heading.style.display = hasVisibleItems ? '' : 'none'
+      heading.style.display = hasVisibleItems ? "" : "none";
     } else {
-      heading.style.display = ''
+      heading.style.display = "";
     }
-  })
+  });
 
   // Apply search highlighting to visible items
   if (query) {
-    highlightSearchMatches(query)
+    highlightSearchMatches(query);
   }
 }
 
 function highlightSearchMatches(query) {
-  if (!contentRef.value || !query) return
+  if (!contentRef.value || !query) return;
 
-  const content = contentRef.value
+  const content = contentRef.value;
   const walker = document.createTreeWalker(
     content,
     NodeFilter.SHOW_TEXT,
     {
       acceptNode: (node) => {
         // Skip if parent is hidden
-        let parent = node.parentElement
+        let parent = node.parentElement;
         while (parent && parent !== content) {
-          if (parent.style.display === 'none') {
-            return NodeFilter.FILTER_REJECT
+          if (parent.style.display === "none") {
+            return NodeFilter.FILTER_REJECT;
           }
-          parent = parent.parentElement
+          parent = parent.parentElement;
         }
-        return NodeFilter.FILTER_ACCEPT
+        return NodeFilter.FILTER_ACCEPT;
       },
     },
-    false,
-  )
+    false
+  );
 
-  const nodesToReplace = []
-  let node
+  const nodesToReplace = [];
+  let node;
 
   while ((node = walker.nextNode())) {
-    const text = node.nodeValue
-    const lowerText = text.toLowerCase()
+    const text = node.nodeValue;
+    const lowerText = text.toLowerCase();
 
-    if (lowerText.includes(query) && node.parentElement.tagName !== 'MARK') {
-      nodesToReplace.push(node)
+    if (lowerText.includes(query) && node.parentElement.tagName !== "MARK") {
+      nodesToReplace.push(node);
     }
   }
 
   nodesToReplace.forEach((node) => {
-    const text = node.nodeValue
-    const regex = new RegExp(`(${query})`, 'gi')
+    const text = node.nodeValue;
+    const regex = new RegExp(`(${query})`, "gi");
     const highlightedText = text.replace(
       regex,
-      '<mark class="bg-yellow-200 dark:bg-yellow-700 px-1 rounded">$1</mark>',
-    )
+      '<mark class="bg-yellow-200 dark:bg-yellow-700 px-1 rounded">$1</mark>'
+    );
 
-    const span = document.createElement('span')
-    span.innerHTML = highlightedText
-    node.parentNode.replaceChild(span, node)
-  })
+    const span = document.createElement("span");
+    span.innerHTML = highlightedText;
+    node.parentNode.replaceChild(span, node);
+  });
 }
 
 watch(
   () => [props.html, props.searchQuery, props.filteredTasks],
   async () => {
-    await nextTick()
+    await nextTick();
     if (props.html && contentRef.value) {
-      contentRef.value.innerHTML = props.html
-      applyFiltersAndHighlight()
+      contentRef.value.innerHTML = props.html;
+      applyFiltersAndHighlight();
     }
   },
-  { immediate: true, deep: true },
-)
+  { immediate: true, deep: true }
+);
 </script>
 
 <template>
@@ -162,20 +165,35 @@ watch(
 <style scoped>
 @reference "tailwindcss";
 
-.markdown-content :deep(h1) {
-  @apply text-2xl text-gray-900 mb-4;
+/* Light mode text colors */
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(p),
+.markdown-content :deep(li),
+.markdown-content :deep(ul),
+.markdown-content :deep(strong) {
+  @apply text-gray-700;
 }
 
-.dark .markdown-content :deep(h1) {
-  @apply text-gray-50;
+/* Dark mode text colors */
+.dark .markdown-content :deep(h1),
+.dark .markdown-content :deep(h2),
+.dark .markdown-content :deep(h3),
+.dark .markdown-content :deep(p),
+.dark .markdown-content :deep(li),
+.dark .markdown-content :deep(ul),
+.dark .markdown-content :deep(strong) {
+  @apply text-gray-400;
+}
+
+/* Element-specific styles */
+.markdown-content :deep(h1) {
+  @apply text-2xl mb-4;
 }
 
 .markdown-content :deep(h2) {
-  @apply text-2xl text-gray-800 font-light mt-6 mb-3 pb-2;
-}
-
-.dark .markdown-content :deep(h2) {
-  @apply text-gray-100;
+  @apply text-2xl font-light mt-6 mb-3 pb-2;
 }
 
 .markdown-content :deep(h2:first-child) {
@@ -183,16 +201,11 @@ watch(
 }
 
 .markdown-content :deep(h3) {
-  @apply text-base text-gray-800 font-semibold mt-4 mb-2;
-}
-
-.dark .markdown-content :deep(h3) {
-  /* color: #ffffff !important; */
-  @apply text-gray-50;
+  @apply text-base font-semibold mt-4 mb-2;
 }
 
 .markdown-content :deep(p) {
-  @apply mb-3 leading-6 text-gray-700 dark:text-gray-300 font-extralight text-lg;
+  @apply mb-3 leading-6 font-extralight text-lg;
 }
 
 .markdown-content :deep(ul) {
@@ -200,11 +213,11 @@ watch(
 }
 
 .markdown-content :deep(li) {
-  @apply leading-6 text-gray-600 dark:text-gray-300 font-extralight text-lg;
+  @apply leading-6 text-lg;
 }
 
 .markdown-content :deep(code) {
-  @apply bg-red-50 dark:bg-slate-800 text-red-700 dark:text-red-300 px-2 py-0.5 rounded text-xs font-mono font-medium;
+  @apply bg-red-50 dark:bg-slate-800 text-red-700 dark:text-red-300 px-2 py-0.5 rounded text-sm font-mono font-medium;
 }
 
 .markdown-content :deep(pre) {
@@ -216,7 +229,7 @@ watch(
 }
 
 .markdown-content :deep(strong) {
-  @apply font-semibold text-gray-900 dark:text-white;
+  @apply font-semibold;
 }
 
 .markdown-content :deep(a) {
