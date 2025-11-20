@@ -185,11 +185,13 @@ watch([tasks, collapsedSections], () => {
       </div>
 
       <!-- Search Bar (centered, like Laravel docs) -->
-      <div class="flex-1 max-w-md mx-auto">
-        <SearchBar ref="searchBarRef" v-model="searchQuery" />
+      <div class="flex-1 flex justify-center min-w-0">
+        <div class="w-full max-w-md">
+          <SearchBar ref="searchBarRef" v-model="searchQuery" />
+        </div>
       </div>
 
-      <div class="shrink-0 relative overflow-visible">
+      <div class="flex-none relative overflow-visible">
         <ThemeToggle />
       </div>
     </header>
