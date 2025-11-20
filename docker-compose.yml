@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  task-tracker:
+    image: ghcr.io/ilie/task-tracker:latest
+    container_name: task-tracker
+    networks:
+      - proxy
+    labels:
+      # Watchtower
+      - "com.centurylinklabs.watchtower.enable=true"
+
+      # Traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.task-tracker.entrypoints=http"
+      - "traefik.http.routers.task-tracker.rule=Host(`${TASK_TRACKER_DOMAIN}`)"
+      - "traefik.http.middlewares.task-tracker-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.task-tracker.middlewares=task-tracker-https-redirect"
+      - "traefik.http.routers.task-tracker-secure.entrypoints=https"
+      - "traefik.http.routers.task-tracker-secure.rule=Host(`${TASK_TRACKER_DOMAIN}`)"
+      - "traefik.http.routers.task-tracker-secure.tls=true"
+      - "traefik.http.services.task-tracker.loadbalancer.server.port=80"
+      - "traefik.docker.network=proxy"
+    restart: unless-stopped
+
+  # Watchtower automatically updates containers when new images are available
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.docker/config.json:/config.json:ro
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=${WATCHTOWER_POLL_INTERVAL:-300}
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_ROLLING_RESTART=true
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
