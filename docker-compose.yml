@@ -2,13 +2,15 @@ services:
   task-tracker:
     image: ghcr.io/ilie/task-tracker:latest
     container_name: task-tracker
+    ports:
+      - "${TASK_TRACKER_PORT:-8080}:80"
     networks:
       - proxy
     labels:
       # Watchtower
       - "com.centurylinklabs.watchtower.enable=true"
 
-      # Traefik
+      # Traefik (only used when traefik profile is active)
       - "traefik.enable=true"
       - "traefik.http.routers.task-tracker.entrypoints=http"
       - "traefik.http.routers.task-tracker.rule=Host(`${TASK_TRACKER_DOMAIN}`)"
@@ -22,10 +24,13 @@ services:
     restart: unless-stopped
 
   # Watchtower automatically updates containers when new images are available
+  # Only runs when WATCHTOWER_ON=true in .env file
   watchtower:
     image: containrrr/watchtower:latest
     container_name: watchtower
     restart: unless-stopped
+    profiles:
+      - watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.docker/config.json:/config.json:ro
