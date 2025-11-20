@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   task-tracker:
     image: ghcr.io/ilie/task-tracker:latest
